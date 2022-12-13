@@ -1,9 +1,8 @@
 #lang racket
 
-(require (except-in lang/htdp-intermediate-lambda lambda require))
+(require (except-in lang/htdp-intermediate-lambda lambda require define-struct))
 (require (only-in lang/htdp-intermediate-lambda
-                    [lambda intermediate-lambda]
-                    [require intermediate-require]))
+                  [lambda intermediate-lambda]))
 
  ; have to use this version of quickcheck because of restrictions in the test engine
 (require (only-in deinprogramm/quickcheck/quickcheck
@@ -25,13 +24,18 @@
                                           add-failed-check! 
                                           failed-check
                                           property-fail))
+(require (for-syntax syntax/parse
+                     racket/syntax))
 (require (only-in racket/syntax-srcloc syntax-srcloc))
 
 
 (provide (all-from-out lang/htdp-intermediate-lambda))
-(provide for-all ==> check-property)
+(provide require
+         for-all
+         ==>
+         check-property)
 (provide (rename-out [intermediate-lambda lambda]
-                     [intermediate-require require]
+                     [my-define-struct define-struct]
                      [arbitrary-integer gen:Integer]
                      [arbitrary-printable-ascii-string gen:String]
                      [arbitrary-boolean gen:Boolean]
@@ -46,6 +50,24 @@
 
 (module reader syntax/module-reader
   isl-spec)
+
+(define-syntax (my-define-struct stx)
+  (syntax-parse stx
+    [(_ name vals ...)
+     #:with mod-name (format-id stx "~a" (gensym))
+     #:with quoted-mod-name (datum->syntax stx `(quote ,(syntax->datum #'mod-name)))
+     #:with Name (format-id stx "~a"
+                            (string-titlecase
+                             (symbol->string
+                              (syntax->datum #'name))))
+     #`(begin
+         (module mod-name racket
+           (require (only-in lang/htdp-intermediate-lambda
+                             [define-struct intermediate-define-struct]))
+           (provide (except-out (all-defined-out) Name))
+           (intermediate-define-struct name vals ...))
+         (#%require quoted-mod-name))]))
+
 
 (define-syntax for-all
   (syntax-rules ()
