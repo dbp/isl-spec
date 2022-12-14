@@ -1,9 +1,9 @@
 #lang racket
 
-(require (except-in lang/htdp-intermediate-lambda lambda require))
+(require (except-in lang/htdp-intermediate-lambda lambda require define-struct))
 (require (only-in lang/htdp-intermediate-lambda
-                    [lambda intermediate-lambda]
-                    [require intermediate-require]))
+                  [lambda intermediate-lambda]
+                  [require intermediate-require]))
 
  ; have to use this version of quickcheck because of restrictions in the test engine
 (require (only-in deinprogramm/quickcheck/quickcheck
@@ -25,27 +25,50 @@
                                           add-failed-check! 
                                           failed-check
                                           property-fail))
+(require (for-syntax syntax/parse
+                     racket/syntax))
 (require (only-in racket/syntax-srcloc syntax-srcloc))
 
 
 (provide (all-from-out lang/htdp-intermediate-lambda))
-(provide for-all ==> check-property)
+(provide for-all
+         ==>
+         check-property)
 (provide (rename-out [intermediate-lambda lambda]
                      [intermediate-require require]
-                     [arbitrary-integer gen:Integer]
-                     [arbitrary-printable-ascii-string gen:String]
-                     [arbitrary-boolean gen:Boolean]
-                     [arbitrary-integer-from-to gen:Integer-from-to]
-                     [arbitrary-natural gen:Natural]
-                     [arbitrary-list gen:ListOf]
-                     [arbitrary-nonempty-list gen:NonEmptyListOf]
-                     [arbitrary-record gen:RecordOf]
-                     [arbitrary-procedure gen:ProcedureOf]))
+                     [my-define-struct define-struct]
+                     [arbitrary-integer Integer]
+                     [arbitrary-printable-ascii-string String]
+                     [arbitrary-boolean Boolean]
+                     [arbitrary-integer-from-to Integer-from-to]
+                     [arbitrary-natural Natural]
+                     [arbitrary-list ListOf]
+                     [arbitrary-nonempty-list NonEmptyListOf]
+                     [arbitrary-record RecordOf]
+                     [arbitrary-procedure ProcedureOf]))
 
 
 
 (module reader syntax/module-reader
   isl-spec)
+
+(define-syntax (my-define-struct stx)
+  (syntax-parse stx
+    [(_ name vals ...)
+     #:with mod-name (format-id stx "~a" (gensym))
+     #:with quoted-mod-name (datum->syntax stx `(submod "." ,(syntax->datum #'mod-name)))
+     #:with Name (format-id stx "~a"
+                            (string-titlecase
+                             (symbol->string
+                              (syntax->datum #'name))))
+     (syntax-local-lift-module
+     #'(module mod-name racket
+         (require (only-in lang/htdp-intermediate-lambda
+                           [define-struct dstruct]))
+         (provide (except-out (all-defined-out) Name))
+         (dstruct name vals ...)))
+     #'(begin (#%require quoted-mod-name))]))
+
 
 (define-syntax for-all
   (syntax-rules ()
