@@ -19,16 +19,23 @@
                   arbitrary-list
                   arbitrary-nonempty-list
                   arbitrary-record
-                  arbitrary-procedure))
+                  arbitrary-procedure
+                  choose-integer
+                  exn:assertion-violation?
+                  exn:assertion-violation-who
+                  exn:assertion-violation-irritants))
 
 (require (only-in test-engine/test-engine add-test! 
                                           add-failed-check! 
                                           failed-check
-                                          property-fail))
+                                          property-fail
+                                          property-error))
+(require test-engine/srcloc)
+
 (require (for-syntax syntax/parse
                      racket/syntax))
-(require (only-in racket/syntax-srcloc syntax-srcloc))
-
+(require (for-syntax (only-in racket/syntax-srcloc syntax-srcloc)
+                     (only-in racket/string string-replace)))
 
 (provide (all-from-out lang/htdp-intermediate-lambda))
 (provide for-all
@@ -45,12 +52,19 @@
                      [arbitrary-list ListOf]
                      [arbitrary-nonempty-list NonEmptyListOf]
                      [arbitrary-record RecordOf]
-                     [arbitrary-procedure ProcedureOf]))
+                     [arbitrary-procedure ProcedureOf]
+                     [arbitrary-procedure ->]
+                     [choose-integer cInteger]))
 
 
 
 (module reader syntax/module-reader
   isl-spec)
+
+
+(define-for-syntax (struct-name->signature-name struct-name)
+  (string-replace (string-titlecase (symbol->string struct-name))
+                  "-" ""))
 
 (define-syntax (my-define-struct stx)
   (syntax-parse stx
@@ -58,9 +72,8 @@
      #:with mod-name (format-id stx "~a" (gensym))
      #:with quoted-mod-name (datum->syntax stx `(submod "." ,(syntax->datum #'mod-name)))
      #:with Name (format-id stx "~a"
-                            (string-titlecase
-                             (symbol->string
-                              (syntax->datum #'name))))
+                            (struct-name->signature-name
+                             (syntax->datum #'name)))
      (syntax-local-lift-module
      #'(module mod-name racket
          (require (only-in lang/htdp-intermediate-lambda
@@ -75,17 +88,48 @@
     [(for-all ((?id ?gen) ...) ?body0 ?body1 ...)
      (property ((?id ?gen) ...) ?body0 ?body1 ...)]))
 
-(define (do-check-property src prop)
-  (add-test! (lambda ()
-               (let-values ([(ntest stamps result) (quickcheck-results prop)])
-                 (if (check-result? result)
-                     (begin (add-failed-check! (failed-check (property-fail (syntax-srcloc src) result) (syntax-srcloc src)))
-                            #f)
-                     #t)))))
+
+;; Much of this is modified from a version within deinprogramm/quickcheck or htdp-lib, since they aren't exported
+(define (do-check-property srcloc prop)
+  (add-test!
+   (lambda ()
+     (with-handlers ((exn:fail?
+                      (lambda (e)
+                        (add-failed-check! (failed-check (property-error srcloc e)
+                                                         (exn-srcloc e))))))
+       (call-with-values
+        (lambda ()
+          (with-handlers
+              ((exn:assertion-violation?
+                (lambda (e)
+                  ;; minor kludge to produce comprehensible error message
+                  (if (eq? (exn:assertion-violation-who e) 'coerce->result-generator)
+                      (raise (make-exn:fail (string-append "Value must be property or boolean: "
+                                                           ((error-value->string-handler)
+                                                            (car (exn:assertion-violation-irritants e))
+                                                            100))
+                                            (exn-continuation-marks e)))
+                      (raise e)))))
+            (quickcheck-results prop)))
+        (lambda (ntest stamps result)
+          (if (check-result? result)
+              (begin (add-failed-check!
+                      (failed-check (property-fail srcloc result) srcloc))
+                     #f)
+              #t)))))))
+       
+  #;(add-test!
+   (lambda ()
+     (let-values ([(ntest stamps result) (quickcheck-results prop)])
+       (if (check-result? result)
+           (begin (add-failed-check!
+                   (failed-check (property-fail srcloc result) srcloc))
+                  #f)
+           #t))))
 
 (define-syntax (check-property stx)
   (unless (memq (syntax-local-context) '(module top-level))
     (raise-syntax-error #f "`check-property' must be at the top level" stx))
   (syntax-case stx ()
-    ((_ prop) #'(do-check-property #`stx prop))
+    ((_ prop) #`(do-check-property #,(syntax-srcloc stx) prop))
     (_ (raise-syntax-error #f "`check-property' expects a single operand" stx))))
