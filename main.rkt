@@ -5,25 +5,11 @@
                   [lambda intermediate-lambda]
                   [require intermediate-require]))
 
- ; have to use this version of quickcheck because of restrictions in the test engine
+ ; have to use this version of quickcheck result because of restrictions in the test engine
 (require (only-in deinprogramm/quickcheck/quickcheck
-                  property
-                  ==>
-                  quickcheck-results
-                  check-result?
-                  arbitrary-integer
-                  arbitrary-boolean
-                  arbitrary-printable-ascii-string
-                  arbitrary-integer-from-to
-                  arbitrary-natural
-                  arbitrary-list
-                  arbitrary-nonempty-list
-                  arbitrary-record
-                  arbitrary-procedure
-                  choose-integer
-                  exn:assertion-violation?
-                  exn:assertion-violation-who
-                  exn:assertion-violation-irritants))
+                  make-result))
+
+(require (except-in quickcheck make-result))
 
 (require (only-in test-engine/test-engine add-test! 
                                           add-failed-check! 
@@ -40,21 +26,24 @@
 (provide (all-from-out lang/htdp-intermediate-lambda))
 (provide for-all
          ==>
-         check-property)
+         check-property
+         bind-generators
+         )
 (provide (rename-out [intermediate-lambda lambda]
                      [intermediate-require require]
                      [my-define-struct define-struct]
                      [arbitrary-integer Integer]
                      [arbitrary-printable-ascii-string String]
                      [arbitrary-boolean Boolean]
-                     [arbitrary-integer-from-to Integer-from-to]
+                     ;[arbitrary-integer-from-to Integer-from-to]
                      [arbitrary-natural Natural]
                      [arbitrary-list ListOf]
-                     [arbitrary-nonempty-list NonEmptyListOf]
+                     ;[arbitrary-nonempty-list NonEmptyListOf]
                      [arbitrary-record RecordOf]
                      [arbitrary-procedure ProcedureOf]
                      [arbitrary-procedure ->]
-                     [choose-integer cInteger]))
+                     [choose-integer cInteger]
+                     [choose-one-of cOneOf]))
 
 
 
@@ -99,7 +88,7 @@
                                                          (exn-srcloc e))))))
        (call-with-values
         (lambda ()
-          (with-handlers
+          #;(with-handlers
               ((exn:assertion-violation?
                 (lambda (e)
                   ;; minor kludge to produce comprehensible error message
@@ -109,12 +98,14 @@
                                                             (car (exn:assertion-violation-irritants e))
                                                             100))
                                             (exn-continuation-marks e)))
-                      (raise e)))))
-            (quickcheck-results prop)))
+                      (raise e))))))
+            (quickcheck-results prop))
         (lambda (ntest stamps result)
-          (if (check-result? result)
+          (if (result? result)
               (begin (add-failed-check!
-                      (failed-check (property-fail srcloc result) srcloc))
+                      (failed-check (property-fail srcloc (make-result (result-ok result)
+                                                                       (result-stamp result)
+                                                                       (result-arguments-list result))) srcloc))
                      #f)
               #t)))))))
        
