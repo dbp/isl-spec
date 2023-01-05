@@ -27,7 +27,6 @@
 (provide for-all
          ==>
          check-property
-         bind-generators
          )
 (provide (rename-out [intermediate-lambda lambda]
                      [intermediate-require require]
@@ -41,9 +40,8 @@
                      ;[arbitrary-nonempty-list NonEmptyListOf]
                      [arbitrary-record RecordOf]
                      [arbitrary-procedure ProcedureOf]
-                     [arbitrary-procedure ->]
-                     [choose-integer cInteger]
-                     [choose-one-of cOneOf]))
+                     [arbitrary-procedure ->]))
+(provide (prefix-out qc: (all-from-out quickcheck)))
 
 
 
