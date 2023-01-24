@@ -27,6 +27,8 @@
 (provide for-all
          ==>
          check-property
+         current-milliseconds
+         sleep
          )
 (provide (rename-out [intermediate-lambda lambda]
                      [intermediate-require require]
