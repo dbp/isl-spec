@@ -1,5 +1,12 @@
 #lang racket
 
+;; simple simulated timing provided by artificial ticks that
+;; update a hidden global mutable variable.
+(define timer 0)
+(define (start-timer!) (set! timer 0))
+(define (tick!) (set! timer (+ timer 1)))
+(define (get-timer!) timer)
+
 (require (except-in lang/htdp-intermediate-lambda lambda require define-struct))
 (require (only-in lang/htdp-intermediate-lambda
                   [lambda intermediate-lambda]
@@ -29,6 +36,9 @@
          check-property
          current-milliseconds
          sleep
+         start-timer!
+         tick!
+         get-timer!
          )
 (provide (rename-out [intermediate-lambda lambda]
                      [intermediate-require require]
@@ -44,6 +54,7 @@
                      [arbitrary-procedure ProcedureOf]
                      [arbitrary-procedure ->]))
 (provide (prefix-out qc: (all-from-out quickcheck)))
+
 
 
 
