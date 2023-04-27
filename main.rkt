@@ -42,16 +42,17 @@
 (provide (rename-out [intermediate-lambda lambda]
                      [intermediate-require require]
                      [my-define-struct define-struct]
-                     [arbitrary-integer Integer]
-                     [arbitrary-printable-ascii-string String]
-                     [arbitrary-boolean Boolean]
+                     ;[arbitrary-integer Integer]
+                     ;[arbitrary-printable-ascii-string String]
+                     ;[arbitrary-boolean Boolean]
                      ;[arbitrary-integer-from-to Integer-from-to]
-                     [arbitrary-natural Natural]
-                     [arbitrary-list ListOf]
+                     ;[arbitrary-natural Natural]
+                     ;[arbitrary-list ListOf]
                      ;[arbitrary-nonempty-list NonEmptyListOf]
-                     [arbitrary-record RecordOf]
-                     [arbitrary-procedure ProcedureOf]
-                     [arbitrary-procedure ->]))
+                     ;[arbitrary-record RecordOf]
+                     ;[arbitrary-procedure ProcedureOf]
+                     ;[arbitrary-procedure ->]
+                     ))
 (provide (prefix-out qc: (all-from-out quickcheck)))
 
 
