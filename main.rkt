@@ -16,7 +16,7 @@
 (require (only-in deinprogramm/quickcheck/quickcheck
                   make-result))
 
-(require (except-in quickcheck make-result))
+(require (except-in quickcheck make-result ==>))
 
 (require (only-in test-engine/test-engine add-test! 
                                           add-failed-check! 
@@ -32,7 +32,6 @@
 
 (provide (all-from-out lang/htdp-intermediate-lambda))
 (provide for-all
-         ==>
          check-property
          current-milliseconds
          sleep
